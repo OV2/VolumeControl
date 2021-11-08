@@ -8,11 +8,12 @@ Although developed when Vista was released, it still works the same on Windows 1
 
 ```
 General usage:
-VolumeControl.exe capt|rend count|(def|INDEX OPERATION [OPERATION ...]) [capt|rend ...]:
+VolumeControl.exe capt|rend count|(def|INDEX|NAME OPERATION [OPERATION ...]) [capt|rend ...]:
    capt|rend: operate on capture or render endpoint
    count    : display corresponding endpoint count
    def      : operate on default capture/render endpoint
    INDEX    : device index, between 0 and endpoint count
+   NAME     : try to find device by substring matching (case insensitive) with NAME
    OPERATION: one of the following:
       stepup                 : master volume step up
       stepdown               : master volume step down
