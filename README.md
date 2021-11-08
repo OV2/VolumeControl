@@ -1,4 +1,4 @@
-#Volume Control
+# Volume Control
 
 Volume Control is a command-line application to traverse the device paths and control the various volume-levels (master and individual levels) of capture and render devices.
 Additionaly, it can be used to turn the microphone boost on and of (this has only been tested on Audigy 2 cards, but has some internal logic to work on other devices). 
