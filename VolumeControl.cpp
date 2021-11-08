@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <strsafe.h>
+#include <atlstr.h>
 
 CEndpoint *endpoint;
 
@@ -51,7 +52,29 @@ int _tmain(int argc, _TCHAR* argv[])
             } else if(lstrcmpi(argv[currentArg+1],L"def")==0){
                 renderEndpointVolume = endpoint->GetDefaultRenderEndpointVolume();
             } else {
-                devNr = _wtoi(argv[currentArg+1]);
+				wchar_t *end_ptr = NULL;
+				devNr = wcstol(argv[currentArg + 1], &end_ptr, 10);
+				if (*end_ptr != L'0')
+				{
+					devNr = -1;
+					CString search_str(argv[currentArg + 1]);
+					search_str.MakeLower();
+					for (int i = 0; i < endpoint->getRenderEndpointCount(); i++)
+					{
+						CRenderEndpointVolume *tmp = endpoint->GetRenderEndpointVolume(i);
+						tmp->getDeviceName(&devName);
+						delete tmp;
+						CString dev_name(devName);
+						CoTaskMemFree(devName);
+						dev_name.MakeLower();
+						if (dev_name.Find(search_str) >= 0)
+						{
+							devNr = i;
+							break;
+						}
+					}
+				}
+
                 if(devNr<0||devNr>=endpoint->getRenderEndpointCount()) {
                     argError(L"Invalid endpoint device index: ",argv[currentArg+1]);
                 }
@@ -76,14 +99,36 @@ int _tmain(int argc, _TCHAR* argv[])
             } else if(lstrcmpi(argv[currentArg+1],L"def")==0){
                 captureEndpointVolume = endpoint->GetDefaultCaptureEndpointVolume();
             } else {
-                devNr = _wtoi(argv[currentArg+1]);
+				wchar_t *end_ptr = NULL;
+				devNr = wcstol(argv[currentArg + 1], &end_ptr, 10);
+				if (*end_ptr != L'0')
+				{
+					devNr = -1;
+					CString search_str(argv[currentArg + 1]);
+					search_str.MakeLower();
+					for (int i = 0; i < endpoint->getCaptureEndpointCount(); i++)
+					{
+						CCaptureEndpointVolume *tmp = endpoint->GetCaptureEndpointVolume(i);
+						tmp->getDeviceName(&devName);
+						delete tmp;
+						CString dev_name(devName);
+						CoTaskMemFree(devName);
+						dev_name.MakeLower();
+						if (dev_name.Find(search_str) >= 0)
+						{
+							devNr = i;
+							break;
+						}
+					}
+				}
+
                 if(devNr<0||devNr>=endpoint->getCaptureEndpointCount()) {
                     argError(L"Invalid endpoint device index: ",argv[currentArg+1]);
                 }
                 captureEndpointVolume = endpoint->GetCaptureEndpointVolume(devNr);
             }
             captureEndpointVolume->getDeviceName(&devName);
-            wprintf(L"Operating on render endpoing: %s\n",devName);
+            wprintf(L"Operating on capture endpoing: %s\n",devName);
             CoTaskMemFree(devName);
             if((usedargs = processCaptureArg(captureEndpointVolume,&argv[currentArg + 2],argc-currentArg-2)) == 0) {
                 delete captureEndpointVolume;
@@ -344,14 +389,15 @@ int processLevelArg(CLevelVolumeControl *levelVolumeControl,TCHAR **argPoint,int
     return usedargs;
 }
 
-void displayHelp(WCHAR *exeName)
+void displayHelp(TCHAR *exeName)
 {
     wprintf(L"General usage:\n");
-    wprintf(L"%s capt|rend count|(def|INDEX OPERATION [OPERATION ...]) [capt|rend ...]:\n",exeName);
+    wprintf(L"%s capt|rend count|(def|INDEX|NAME OPERATION [OPERATION ...]) [capt|rend ...]:\n",exeName);
     wprintf(L"   capt|rend: operate on capture or render endpoint\n");
     wprintf(L"   count    : display corresponding endpoint count\n");
     wprintf(L"   def      : operate on default capture/render endpoint\n");
     wprintf(L"   INDEX    : device index, between 0 and endpoint count\n");
+	wprintf(L"   NAME     : try to find device by substring matching (case insensitive) with NAME\n");
     wprintf(L"   OPERATION: one of the following:\n");
     wprintf(L"      stepup                 : master volume step up\n");
     wprintf(L"      stepdown               : master volume step down\n");
@@ -389,45 +435,3 @@ void displayHelp(WCHAR *exeName)
     wprintf(L"\n Multiple operations on endpoints can be combined, operations on volume levels");
     wprintf(L"\n can not (\"level DEVPATH\" is needed in front of each level operation).");
 }
-
-/*
-LPWSTR pathString;
-    LPWSTR deviceString;
-    CEndpoint *endpoint = new CEndpoint();
-    CCaptureEndpointVolume *captureEndpointVolume;
-    CRenderEndpointVolume *renderEndpointVolume;
-    CLevelVolumeControl *lineInLevel;
-
-
-    captureEndpointVolume = endpoint->GetDefaultCaptureEndpointVolume();
-    renderEndpointVolume = endpoint->GetDefaultRenderEndpointVolume();
-    //captureEndpointVolume->tryMicrophoneBoost(true);
-
-    lineInLevel = renderEndpointVolume->GetLevelVolumeControl(3);
-    wprintf(L"Volume Range: From %f to %f step %f\n",lineInLevel->getMinDb(),lineInLevel->getMaxDb(),lineInLevel->getStepDb());
-    wprintf(L"Current Level: %f db\n",lineInLevel->getCurrentChannelDb(0));
-    lineInLevel->setVolumeLevelScalar(0.1);
-    //lineInLevel->setVolumeLevelDb(-3.0);
-
-    wprintf(L"Render Path:\n");
-    renderEndpointVolume->getDeviceName(&deviceString);
-    wprintf(deviceString);
-    CoTaskMemFree(deviceString);
-    renderEndpointVolume->traverseDevicePath(&pathString);
-    wprintf(pathString);
-    CoTaskMemFree(pathString);
-    wprintf(L"\n");
-
-    wprintf(L"Capture Path:\n");
-    captureEndpointVolume->getDeviceName(&deviceString);
-    wprintf(deviceString);
-    CoTaskMemFree(deviceString);
-    captureEndpointVolume->traverseDevicePath(&pathString);
-    wprintf(pathString);
-    CoTaskMemFree(pathString);
-    wprintf(L"\n");
-
-    delete lineInLevel;
-    delete captureEndpointVolume;
-    delete endpoint;
-*/
