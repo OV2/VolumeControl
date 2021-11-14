@@ -10,8 +10,9 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include <atlstr.h>
+#include <memory>
 
-CEndpoint *endpoint;
+using namespace std;
 
 int processRenderArg(CRenderEndpointVolume *renderEndpointVolume,TCHAR **argPoint,int remainingArgCount);
 int processCaptureArg(CCaptureEndpointVolume *captureEndpointVolume,TCHAR **argPoint,int remainingArgCount);
@@ -21,7 +22,6 @@ void displayHelp(TCHAR *exeName);
 
 void argError(TCHAR *msg,TCHAR *arg)
 {
-    delete endpoint;
     wprintf(msg);
     wprintf(L"%s\n",arg);
     exit(1);
@@ -29,9 +29,9 @@ void argError(TCHAR *msg,TCHAR *arg)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-    endpoint = new CEndpoint();
-    CRenderEndpointVolume *renderEndpointVolume;
-    CCaptureEndpointVolume *captureEndpointVolume;
+    unique_ptr<CEndpoint> endpoint(make_unique<CEndpoint>());
+    unique_ptr<CRenderEndpointVolume> renderEndpointVolume;
+	unique_ptr<CCaptureEndpointVolume> captureEndpointVolume;
     UINT devNr;
     WCHAR *devName;
     int usedargs=0;
@@ -50,7 +50,7 @@ int _tmain(int argc, _TCHAR* argv[])
                 currentArg += 2;
                 continue;
             } else if(lstrcmpi(argv[currentArg+1],L"def")==0){
-                renderEndpointVolume = endpoint->GetDefaultRenderEndpointVolume();
+                renderEndpointVolume.reset(endpoint->GetDefaultRenderEndpointVolume());
             } else {
 				wchar_t *end_ptr = NULL;
 				devNr = wcstol(argv[currentArg + 1], &end_ptr, 10);
@@ -61,9 +61,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					search_str.MakeLower();
 					for (int i = 0; i < endpoint->getRenderEndpointCount(); i++)
 					{
-						CRenderEndpointVolume *tmp = endpoint->GetRenderEndpointVolume(i);
+						unique_ptr<CRenderEndpointVolume> tmp(endpoint->GetRenderEndpointVolume(i));
 						tmp->getDeviceName(&devName);
-						delete tmp;
 						CString dev_name(devName);
 						CoTaskMemFree(devName);
 						dev_name.MakeLower();
@@ -78,17 +77,15 @@ int _tmain(int argc, _TCHAR* argv[])
                 if(devNr<0||devNr>=endpoint->getRenderEndpointCount()) {
                     argError(L"Invalid endpoint device index: ",argv[currentArg+1]);
                 }
-                renderEndpointVolume = endpoint->GetRenderEndpointVolume(devNr);
+                renderEndpointVolume.reset(endpoint->GetRenderEndpointVolume(devNr));
             }
             renderEndpointVolume->getDeviceName(&devName);
             wprintf(L"Operating on render endpoing: %s\n",devName);
             CoTaskMemFree(devName);
-            if(!(usedargs = processRenderArg(renderEndpointVolume,&argv[currentArg + 2],argc-currentArg-2))) {
-                delete renderEndpointVolume;
+            if(!(usedargs = processRenderArg(renderEndpointVolume.get(),&argv[currentArg + 2],argc-currentArg-2))) {
                 argError(L"Invalid argument at this point: ",argv[currentArg + 2]);
             }
             currentArg += usedargs + 2;
-            delete renderEndpointVolume;
         } else if(lstrcmpi(argv[currentArg],L"capt")==0){
             if(argc-currentArg<2)
                 argError(L"Too few arguments on: ",argv[currentArg]);
@@ -97,7 +94,7 @@ int _tmain(int argc, _TCHAR* argv[])
                 currentArg += 2;
                 continue;
             } else if(lstrcmpi(argv[currentArg+1],L"def")==0){
-                captureEndpointVolume = endpoint->GetDefaultCaptureEndpointVolume();
+                captureEndpointVolume.reset(endpoint->GetDefaultCaptureEndpointVolume());
             } else {
 				wchar_t *end_ptr = NULL;
 				devNr = wcstol(argv[currentArg + 1], &end_ptr, 10);
@@ -108,9 +105,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					search_str.MakeLower();
 					for (int i = 0; i < endpoint->getCaptureEndpointCount(); i++)
 					{
-						CCaptureEndpointVolume *tmp = endpoint->GetCaptureEndpointVolume(i);
+						unique_ptr<CCaptureEndpointVolume> tmp(endpoint->GetCaptureEndpointVolume(i));
 						tmp->getDeviceName(&devName);
-						delete tmp;
 						CString dev_name(devName);
 						CoTaskMemFree(devName);
 						dev_name.MakeLower();
@@ -125,22 +121,19 @@ int _tmain(int argc, _TCHAR* argv[])
                 if(devNr<0||devNr>=endpoint->getCaptureEndpointCount()) {
                     argError(L"Invalid endpoint device index: ",argv[currentArg+1]);
                 }
-                captureEndpointVolume = endpoint->GetCaptureEndpointVolume(devNr);
+                captureEndpointVolume.reset(endpoint->GetCaptureEndpointVolume(devNr));
             }
             captureEndpointVolume->getDeviceName(&devName);
             wprintf(L"Operating on capture endpoing: %s\n",devName);
             CoTaskMemFree(devName);
-            if((usedargs = processCaptureArg(captureEndpointVolume,&argv[currentArg + 2],argc-currentArg-2)) == 0) {
-                delete captureEndpointVolume;
+            if((usedargs = processCaptureArg(captureEndpointVolume.get(),&argv[currentArg + 2],argc-currentArg-2)) == 0) {
                 argError(L"Invalid argument at this point: ",argv[currentArg + 2]);
             }
             currentArg += usedargs + 2;
-            delete captureEndpointVolume;
         } else {
             argError(L"Invalid argument at this point: ",argv[currentArg]);
         }
     }
-    delete endpoint;
 
 	return 0;
 }
@@ -149,7 +142,6 @@ int processRenderArg(CRenderEndpointVolume *renderEndpointVolume,TCHAR **argPoin
 {
     UINT usedargs=0;
     UINT pathId;
-    CLevelVolumeControl *levelVolumeControl;
     int curArg;
     for(curArg=0;curArg<remainingArgCount;)
     {
@@ -161,13 +153,12 @@ int processRenderArg(CRenderEndpointVolume *renderEndpointVolume,TCHAR **argPoin
             pathId = _wtoi(argPoint[curArg+1]);
             if(pathId<0||pathId>=renderEndpointVolume->getPathCount())
                 argError(L"Invalid path index: ",argPoint[curArg + 1]);
-            levelVolumeControl = renderEndpointVolume->GetLevelVolumeControl(pathId);
+            unique_ptr<CLevelVolumeControl> levelVolumeControl(renderEndpointVolume->GetLevelVolumeControl(pathId));
             if(levelVolumeControl==NULL)
                 argError(L"Invalid level part, does not contain volume level: ",argPoint[curArg+1]);
             wprintf(L"\tOperating on level control in path: %u\n",pathId);
-            curArg += processLevelArg(levelVolumeControl,&argPoint[curArg+2],remainingArgCount-curArg-2);
+            curArg += processLevelArg(levelVolumeControl.get(),&argPoint[curArg+2],remainingArgCount-curArg-2);
             curArg += 2;
-            delete levelVolumeControl;
         } else if(lstrcmpi(argPoint[curArg],L"pathcount")==0){
             wprintf(L"\tOperation: display path count\n");
             wprintf(L"\t\tPaths: %u\n",renderEndpointVolume->getPathCount());
