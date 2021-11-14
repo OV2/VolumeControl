@@ -27,6 +27,36 @@ void argError(TCHAR *msg,TCHAR *arg)
     exit(1);
 }
 
+BOOL printVersionString()
+{
+	void *verString = NULL;
+	DWORD infoSize;
+	UINT verLen;
+	TCHAR buffer[MAX_PATH];
+
+	if (!GetModuleFileName(0, buffer, MAX_PATH))
+		return FALSE;
+
+	if (!(infoSize = GetFileVersionInfoSize(buffer, &infoSize)))
+		return FALSE;
+
+	unique_ptr<uint8_t> verInfo(new uint8_t[infoSize]);
+
+	if (!verInfo)
+		return FALSE;
+
+	if (!GetFileVersionInfo(buffer, 0, infoSize, verInfo.get())) {
+		return FALSE;
+	}
+
+	if (!VerQueryValue(verInfo.get(), TEXT("\\StringFileInfo\\000904b0\\FileVersion"), &verString, &verLen)) {
+		return FALSE;
+	}
+	wprintf(L"VolumeControl.exe version %s\n", (TCHAR *)verString);
+
+	return TRUE;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
     unique_ptr<CEndpoint> endpoint(make_unique<CEndpoint>());
@@ -42,7 +72,10 @@ int _tmain(int argc, _TCHAR* argv[])
     }
 
     for(int currentArg=1;currentArg<argc;) {
-        if(lstrcmpi(argv[currentArg],L"rend")==0){
+		if (lstrcmpi(argv[currentArg], L"version") == 0) {
+			printVersionString();
+			break;
+		} else if (lstrcmpi(argv[currentArg], L"rend") == 0) {
             if(argc-currentArg<2)
                 argError(L"Too few arguments on: ",argv[currentArg]);
             if(lstrcmpi(argv[currentArg+1],L"count")==0){
@@ -382,6 +415,7 @@ int processLevelArg(CLevelVolumeControl *levelVolumeControl,TCHAR **argPoint,int
 
 void displayHelp(TCHAR *exeName)
 {
+	printVersionString();
     wprintf(L"General usage:\n");
     wprintf(L"%s capt|rend count|(def|INDEX|NAME OPERATION [OPERATION ...]) [capt|rend ...]:\n",exeName);
     wprintf(L"   capt|rend: operate on capture or render endpoint\n");
