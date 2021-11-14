@@ -54,7 +54,7 @@ int _tmain(int argc, _TCHAR* argv[])
             } else {
 				wchar_t *end_ptr = NULL;
 				devNr = wcstol(argv[currentArg + 1], &end_ptr, 10);
-				if (*end_ptr != L'0')
+				if (*end_ptr != L'\0')
 				{
 					devNr = -1;
 					CString search_str(argv[currentArg + 1]);
@@ -101,7 +101,7 @@ int _tmain(int argc, _TCHAR* argv[])
             } else {
 				wchar_t *end_ptr = NULL;
 				devNr = wcstol(argv[currentArg + 1], &end_ptr, 10);
-				if (*end_ptr != L'0')
+				if (*end_ptr != L'\0')
 				{
 					devNr = -1;
 					CString search_str(argv[currentArg + 1]);
